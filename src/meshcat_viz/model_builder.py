@@ -9,9 +9,9 @@ import numpy as np
 import rod
 from jaxsim import logging
 from jaxsim.parsers.kinematic_graph import KinematicGraph
-from meshcat.visualizer import Visualizer
 from scipy.spatial.transform import Rotation as R
 
+from .meshcat.visualizer import MeshcatVisualizer
 from .model import MeshcatModel
 from .visual import VisualShapeData, VisualShapeType
 
@@ -19,7 +19,7 @@ from .visual import VisualShapeData, VisualShapeType
 class MeshcatModelBuilder(abc.ABC):
     @staticmethod
     def from_kinematic_graph(
-        visualizer: Visualizer,
+        visualizer: MeshcatVisualizer,
         kinematic_graph: KinematicGraph,
         rod_model: rod.Model,
         model_name: str = None,
