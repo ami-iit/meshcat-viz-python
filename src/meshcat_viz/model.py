@@ -7,14 +7,15 @@ import meshcat
 import numpy as np
 import numpy.typing as npt
 from jaxsim import logging
-from meshcat.visualizer import Visualizer
+
+from .meshcat.visualizer import MeshcatVisualizer
 
 
 @dataclasses.dataclass
 class MeshcatModel:
 
     name: str
-    visualizer: Visualizer = dataclasses.field(repr=False)
+    visualizer: MeshcatVisualizer = dataclasses.field(repr=False)
 
     NodeName = str
     LinkName = str
@@ -137,3 +138,10 @@ class MeshcatModel:
 
         # Update the node pose
         self.visualizer[node_name].set_transform(parent_H_node)
+
+    def set_link_transforms(
+        self, link_names: Sequence[str], transforms: Sequence[npt.NDArray]
+    ) -> None:
+
+        node_names = [self.link_to_node[l] for l in link_names]
+        self.visualizer.set_transforms(paths=node_names, matrices=transforms)

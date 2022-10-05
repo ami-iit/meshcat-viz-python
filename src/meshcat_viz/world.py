@@ -5,9 +5,9 @@ import jax
 import jaxsim.high_level.model
 import numpy as np
 import rod
-from meshcat.servers.zmqserver import start_zmq_server_as_subprocess
-from meshcat.visualizer import Visualizer
 
+from .meshcat.server import MeshCatServer
+from .meshcat.visualizer import MeshcatVisualizer
 from .model import MeshcatModel
 from .model_builder import MeshcatModelBuilder
 
@@ -82,14 +82,11 @@ class MeshcatWorld:
             B_H_W = np.linalg.inv(W_H_B)
             B_H_i = B_H_W @ W_H_i
 
-            # Send to the visualizer the updated transforms
-            _ = [
-                self._meshcat_models[model_name].set_link_pose(
-                    link_name=l.name(),
-                    transform=np.array(B_H_i[l.index()], dtype=float),
-                )
-                for l in self._jaxsim_models[model_name].links()
-            ]
+            # Update link transforms
+            self._meshcat_models[model_name].set_link_transforms(
+                link_names=self._jaxsim_models[model_name].link_names(),
+                transforms=np.array(B_H_i, dtype=float),
+            )
 
     def insert_model(
         self,
@@ -151,16 +148,16 @@ class MeshcatWorld:
         self._meshcat_models.pop(model_name)
 
     @property
-    def meshcat_visualizer(self) -> Visualizer:
+    def meshcat_visualizer(self) -> MeshcatVisualizer:
 
         if self._visualizer is not None:
             return self._visualizer
 
-        # Start MeshCat server
-        server_proc, zmq_url, web_url = start_zmq_server_as_subprocess()
+        # Start custom MeshCat server
+        server_proc, zmq_url, web_url = MeshCatServer.start_as_subprocess()
 
-        # Attach visualizer to server
-        meshcat_visualizer = Visualizer(zmq_url=zmq_url)
+        # Attach custom visualizer to custom server
+        meshcat_visualizer = MeshcatVisualizer(zmq_url=zmq_url)
         meshcat_visualizer.window.server_proc = server_proc
 
         # Configure the visualizer
