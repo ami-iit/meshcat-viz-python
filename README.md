@@ -39,7 +39,7 @@ world.open()
 
 # Insert the model from a URDF/SDF resource.
 # Note: for URDF files support, check details in https://github.com/ami-iit/rod.
-model_name = world.insert_model(sdf=model_sdf_path)
+model_name = world.insert_model(model_description=model_sdf_path)
 
 # Update the base position
 world.update_model(model_name=model_name, base_position=np.array([1.0, 0, 0]))
