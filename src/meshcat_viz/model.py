@@ -48,18 +48,21 @@ class MeshcatModel:
         if self.visual_shapes.default_factory is None:
             self.visual_shapes.default_factory = list
 
-    def nodes_names(self, include_visual_nodes: bool = False) -> List[str]:
+    def nodes_names(
+        self, include_frame_nodes: bool = False, include_visual_nodes: bool = False
+    ) -> List[str]:
 
         model_nodes = [self.name] + list(self.link_to_node.values())
 
-        if not include_visual_nodes:
-            return model_nodes
+        if include_frame_nodes:
+            model_nodes += list(self.frame_to_node.values())
 
-        all_visual_shapes_nodes = list(
-            itertools.chain.from_iterable(self.visual_shapes.values())
-        )
+        if include_visual_nodes:
+            model_nodes += list(
+                itertools.chain.from_iterable(self.visual_shapes.values())
+            )
 
-        return model_nodes + all_visual_shapes_nodes
+        return model_nodes
 
     def delete(self) -> None:
 
@@ -105,7 +108,9 @@ class MeshcatModel:
         quaternion: Optional[npt.NDArray] = None,
     ) -> None:
 
-        if node_name not in self.nodes_names():
+        if node_name not in self.nodes_names(
+            include_frame_nodes=True, include_visual_nodes=True
+        ):
             raise ValueError(f"Failed to find node '{node_name}'")
 
         if {type(transform), type(position), type(quaternion)} == {None}:
