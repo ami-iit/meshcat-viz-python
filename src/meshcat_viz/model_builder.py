@@ -247,6 +247,10 @@ class MeshcatModelBuilder(abc.ABC):
                         parent_link=link,
                     )
 
+                else:
+                    logging.warning(msg="Skipping unsupported geometry:")
+                    logging.warning(msg=f"{repr(visual.geometry)}")
+
                 # Add the shape to the list
                 if visual_shape_data is not None:
                     visual_shapes.append(visual_shape_data)
@@ -278,11 +282,11 @@ class MeshcatModelBuilder(abc.ABC):
 
         # Add the visual shape node under the link node
         meshcat_model.visualizer[node_name].set_object(
-            visual_shape_data.to_meshcat_geometry()
+            geometry=visual_shape_data.to_meshcat_geometry()
         )
 
         # Store the visual shape name as dict entry
         meshcat_model.visual_shapes[parent_link_name] += [node_name]
 
         # Initialize the node transform
-        meshcat_model.visualizer[node_name].set_transform(visual_shape_data.pose)
+        meshcat_model.visualizer[node_name].set_transform(matrix=visual_shape_data.pose)

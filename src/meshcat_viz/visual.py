@@ -38,7 +38,6 @@ class VisualShapeData:
 
         if self.shape_type is VisualShapeType.Box:
 
-            logging.warning("Returning box")
             return meshcat.geometry.Box(self.geometry.size)
 
         elif self.shape_type is VisualShapeType.Sphere:

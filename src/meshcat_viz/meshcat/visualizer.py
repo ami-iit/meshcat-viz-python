@@ -30,4 +30,4 @@ class MeshcatVisualizer(meshcat.visualizer.Visualizer):
         rec: str = self.window.zmq_socket.recv().decode("utf-8")
 
         if not rec.startswith("ok"):
-            raise RuntimeError(f"[set_transforms] {str}")
+            raise RuntimeError(f"[set_transforms] {rec}")
