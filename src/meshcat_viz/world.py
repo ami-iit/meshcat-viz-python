@@ -90,13 +90,14 @@ class MeshcatWorld:
 
     def insert_model(
         self,
-        sdf: Union[str, pathlib.Path],
+        model_description: Union[str, pathlib.Path],
+        is_urdf: bool = False,
         model_name: str = None,
         model_pose: Optional[Tuple[Sequence, Sequence]] = None,
     ) -> str:
 
         # Create the ROD model from the SDF resource
-        rod_model = rod.Sdf.load(sdf=sdf).model
+        rod_model = rod.Sdf.load(sdf=model_description).model
 
         # Extract the model name if not given
         if model_name is None and rod_model.name not in {None, ""}:
@@ -109,7 +110,7 @@ class MeshcatWorld:
 
         # Create the JaxSim model from the SDF resource
         jaxsim_model = jaxsim.high_level.model.Model.build_from_sdf(
-            sdf=sdf, model_name=model_name
+            sdf=model_description, model_name=model_name, is_urdf=is_urdf
         ).mutable(validate=True)
 
         # Create the MeshcatModel
