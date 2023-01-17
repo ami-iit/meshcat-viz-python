@@ -7,8 +7,8 @@ from typing import List
 import meshcat
 import numpy as np
 import rod
+import rod.kinematics
 from jaxsim import logging
-from jaxsim.parsers.kinematic_graph import KinematicGraph
 from scipy.spatial.transform import Rotation as R
 
 from .meshcat.visualizer import MeshcatVisualizer
@@ -18,11 +18,8 @@ from .visual import VisualShapeData, VisualShapeType
 
 class MeshcatModelBuilder(abc.ABC):
     @staticmethod
-    def from_kinematic_graph(
-        visualizer: MeshcatVisualizer,
-        kinematic_graph: KinematicGraph,
-        rod_model: rod.Model,
-        model_name: str = None,
+    def from_rod_model(
+        visualizer: MeshcatVisualizer, rod_model: rod.Model, model_name: str = None
     ) -> MeshcatModel:
 
         # Resolve local URIs if present
@@ -34,13 +31,10 @@ class MeshcatModelBuilder(abc.ABC):
         # Extract the visual shapes from the SDF model
         visual_shapes = MeshcatModelBuilder.extract_visual_shapes(rod_model=rod_model)
 
-        # Copy the links and frames kinematic tree. We use the kinematic graph to
-        # extract the default pose of links and frames.
+        # Copy the links and frames kinematic tree.
         # Link transforms are relative to model's root.
         # Frame transforms are relative to the parent link of the frame.
-        MeshcatModelBuilder.copy_tree(
-            meshcat_model=meshcat_model, kinematic_graph=kinematic_graph
-        )
+        MeshcatModelBuilder.copy_tree(meshcat_model=meshcat_model, rod_model=rod_model)
 
         # Add the visual shapes. All their poses are relative to their parent link and,
         # similarly to frames, are constant and cannot be changed.
@@ -101,16 +95,20 @@ class MeshcatModelBuilder(abc.ABC):
         raise RuntimeError(f"Failed to resolve URI: {uri}")
 
     @staticmethod
-    def copy_tree(meshcat_model: MeshcatModel, kinematic_graph: KinematicGraph) -> None:
+    def copy_tree(meshcat_model: MeshcatModel, rod_model: rod.Model) -> None:
 
-        for link in kinematic_graph:
+        transforms = rod.kinematics.tree_transforms.TreeTransforms.build(
+            model=rod_model, is_top_level=True
+        )
 
-            if link.name in meshcat_model.link_to_node:
-                msg = f"Model '{meshcat_model.name}' already has link '{link.name}'"
+        for link in transforms.kinematic_tree:
+
+            if link.name() in meshcat_model.link_to_node:
+                msg = f"Model '{meshcat_model.name}' already has link '{link.name()}'"
                 raise ValueError(msg)
 
             # Build the name of the visualizer node
-            node_name = f"{meshcat_model.name}/{link.name}"
+            node_name = f"{meshcat_model.name}/{link.name()}"
             logging.debug(f"Adding link visualization node '{node_name}'")
 
             # Add a new visualization node under the root node
@@ -119,22 +117,36 @@ class MeshcatModelBuilder(abc.ABC):
             )
 
             # Store the link name
-            meshcat_model.link_to_node[link.name] = node_name
+            meshcat_model.link_to_node[link.name()] = node_name
 
-            # Initialize the node transform
-            root_H_link = kinematic_graph.relative_transform(
-                relative_to=kinematic_graph.link_names()[0], name=link.name
+            # Compute the node transform wrt the tree root node (model base)
+            root_H_link = transforms.relative_transform(
+                relative_to=transforms.kinematic_tree.link_names()[0], name=link.name()
             )
+
+            # Store the node transforms
             meshcat_model.visualizer[node_name].set_transform(root_H_link)
 
-        for frame in kinematic_graph.frames:
+        for frame in transforms.kinematic_tree.frames:
 
-            if frame.name in meshcat_model.link_to_node:
-                msg = f"Model '{meshcat_model.name}' already has link '{frame.name}'"
+            if frame.name() in meshcat_model.frame_to_node:
+                msg = f"Model '{meshcat_model.name}' already has frame '{frame.name()}'"
                 raise ValueError(msg)
 
+            all_attachables_nodes_dict = dict(
+                **meshcat_model.frame_to_node,
+                **meshcat_model.link_to_node,
+            )
+
+            if frame.attached_to() not in all_attachables_nodes_dict:
+                msg = "Failed to find parent element '{}' of frame '{}'"
+                logging.warning(msg=msg.format(frame.attached_to(), frame.name()))
+                continue
+
             # Build the name of the visualizer node
-            node_name = f"{meshcat_model.name}/{frame.parent.name}/{frame.name}"
+            node_name = (
+                f"{all_attachables_nodes_dict[frame.attached_to()]}/{frame.name()}"
+            )
             logging.debug(f"Adding frame visualization node '{node_name}'")
 
             # Add a new visualization node under the parent's link node
@@ -142,12 +154,12 @@ class MeshcatModelBuilder(abc.ABC):
                 meshcat.geometry.Box([0.0, 0.0, 0.0])
             )
 
-            # Store the link name
-            meshcat_model.link_to_node[frame.name] = node_name
+            # Store the frame name
+            meshcat_model.frame_to_node[frame.name()] = node_name
 
             # Initialize the fixed node transform
-            parent_H_frame = kinematic_graph.relative_transform(
-                relative_to=frame.parent.name, name=frame.name
+            parent_H_frame = transforms.relative_transform(
+                relative_to=frame.attached_to(), name=frame.name()
             )
             meshcat_model.visualizer[node_name].set_transform(parent_H_frame)
 

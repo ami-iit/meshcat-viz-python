@@ -113,9 +113,8 @@ class MeshcatWorld:
         ).mutable(validate=True)
 
         # Create the MeshcatModel
-        meshcat_model = MeshcatModelBuilder.from_kinematic_graph(
+        meshcat_model = MeshcatModelBuilder.from_rod_model(
             visualizer=self.meshcat_visualizer,
-            kinematic_graph=jaxsim_model.physics_model.description,
             rod_model=rod_model,
             model_name=model_name,
         )

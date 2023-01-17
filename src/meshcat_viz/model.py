@@ -19,10 +19,15 @@ class MeshcatModel:
 
     NodeName = str
     LinkName = str
+    FrameName = str
 
     # Dictionary from the link name defined in the SDF/URDF to the scoped named
     # used in the MeshCat visualizer
     link_to_node: Dict[LinkName, NodeName] = dataclasses.field(default_factory=dict)
+
+    # Dictionary from the frame name defined in the SDF/URDF to the scoped named
+    # used in the MeshCat visualizer
+    frame_to_node: Dict[FrameName, NodeName] = dataclasses.field(default_factory=dict)
 
     # Each link could have multiple visual shapes attached, each of them rigidly
     # attached to the link through a constant transforms.
