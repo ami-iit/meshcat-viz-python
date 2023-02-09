@@ -21,7 +21,6 @@ class MeshcatModelBuilder(abc.ABC):
     def from_rod_model(
         visualizer: MeshcatVisualizer, rod_model: rod.Model, model_name: str = None
     ) -> MeshcatModel:
-
         # Resolve local URIs if present
         rod_model = MeshcatModelBuilder.resolve_sdf_tree_uris(rod_model=rod_model)
 
@@ -49,7 +48,6 @@ class MeshcatModelBuilder(abc.ABC):
 
     @staticmethod
     def resolve_sdf_tree_uris(rod_model: rod.Model) -> rod.Model:
-
         rod_model_resolved = copy.deepcopy(rod_model)
 
         links: List[rod.Link] = (
@@ -59,7 +57,6 @@ class MeshcatModelBuilder(abc.ABC):
         )
 
         for link in links:
-
             if link.visual is None:
                 continue
 
@@ -69,7 +66,6 @@ class MeshcatModelBuilder(abc.ABC):
 
             for visual in visuals:
                 if visual.geometry.mesh is not None:
-
                     visual.geometry.mesh.uri = str(
                         MeshcatModelBuilder.resolve_local_uri(
                             uri=visual.geometry.mesh.uri
@@ -80,12 +76,10 @@ class MeshcatModelBuilder(abc.ABC):
 
     @staticmethod
     def resolve_local_uri(uri: str) -> pathlib.Path:
-
         # Remove the prefix of the URI
         uri_no_prefix = uri.split(sep="//")[-1]
 
         for path in os.environ["IGN_GAZEBO_RESOURCE_PATH"].split(":"):
-
             tentative = pathlib.Path(path) / uri_no_prefix
 
             if tentative.is_file():
@@ -96,13 +90,11 @@ class MeshcatModelBuilder(abc.ABC):
 
     @staticmethod
     def copy_tree(meshcat_model: MeshcatModel, rod_model: rod.Model) -> None:
-
         transforms = rod.kinematics.tree_transforms.TreeTransforms.build(
             model=rod_model, is_top_level=True
         )
 
         for link in transforms.kinematic_tree:
-
             if link.name() in meshcat_model.link_to_node:
                 msg = f"Model '{meshcat_model.name}' already has link '{link.name()}'"
                 raise ValueError(msg)
@@ -128,7 +120,6 @@ class MeshcatModelBuilder(abc.ABC):
             meshcat_model.visualizer[node_name].set_transform(root_H_link)
 
         for frame in transforms.kinematic_tree.frames:
-
             if frame.name() in meshcat_model.frame_to_node:
                 msg = f"Model '{meshcat_model.name}' already has frame '{frame.name()}'"
                 raise ValueError(msg)
@@ -165,7 +156,6 @@ class MeshcatModelBuilder(abc.ABC):
 
     @staticmethod
     def extract_visual_shapes(rod_model: rod.Model) -> List[VisualShapeData]:
-
         visual_shapes: List[VisualShapeData] = list()
 
         links: List[rod.Link] = (
@@ -173,7 +163,6 @@ class MeshcatModelBuilder(abc.ABC):
         )
 
         for link in links:
-
             if link.visual is None:
                 continue
 
@@ -182,7 +171,6 @@ class MeshcatModelBuilder(abc.ABC):
             )
 
             for visual in visuals:
-
                 # Get the transform from the parent link to the visual shape
                 if visual.pose is None:
                     link_H_shape = np.eye(4)
@@ -194,7 +182,6 @@ class MeshcatModelBuilder(abc.ABC):
                 visual_shape_data = None
 
                 if visual.geometry.box is not None:
-
                     visual_shape_data = VisualShapeData(
                         name=visual.name,
                         shape_type=VisualShapeType.Box,
@@ -204,7 +191,6 @@ class MeshcatModelBuilder(abc.ABC):
                     )
 
                 elif visual.geometry.cylinder is not None:
-
                     # three.js aligns the y-axis with the axis of rotational symmetry,
                     # instead SDF aligns with the z axis
                     static_tf = np.eye(4)
@@ -223,7 +209,6 @@ class MeshcatModelBuilder(abc.ABC):
                     visual_shapes.append(visual_shape_data)
 
                 elif visual.geometry.sphere is not None:
-
                     visual_shape_data = VisualShapeData(
                         name=visual.name,
                         shape_type=VisualShapeType.Sphere,
@@ -233,7 +218,6 @@ class MeshcatModelBuilder(abc.ABC):
                     )
 
                 elif visual.geometry.mesh is not None:
-
                     # We need to apply the scale, if defined
                     if visual.geometry.mesh.scale is not None:
                         scale = np.array(visual.geometry.mesh.scale)
@@ -261,7 +245,6 @@ class MeshcatModelBuilder(abc.ABC):
     def add_visual_shape(
         meshcat_model: MeshcatModel, visual_shape_data: VisualShapeData
     ) -> None:
-
         # Get the parent link of the visual shape
         parent_link_name = visual_shape_data.parent_link.name
 

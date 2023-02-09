@@ -14,7 +14,6 @@ from .model_builder import MeshcatModelBuilder
 
 class MeshcatWorld:
     def __init__(self, dt: float = 0.001, rtf: float = 1.0):
-
         self.dt = dt
         self.rtf = rtf
 
@@ -25,13 +24,10 @@ class MeshcatWorld:
         self._jaxsim_models: Dict[str, jaxsim.high_level.model.Model] = dict()
 
     def open(self) -> None:
-
         _ = self.meshcat_visualizer
 
     def close(self) -> None:
-
         if self._visualizer is not None:
-
             self.meshcat_visualizer.delete()
 
             self._jaxsim_models = dict()
@@ -46,7 +42,6 @@ class MeshcatWorld:
         base_position: Optional[Sequence] = None,
         base_quaternion: Optional[Sequence] = None,
     ) -> None:
-
         if model_name not in self._meshcat_models:
             raise ValueError(model_name)
 
@@ -69,7 +64,6 @@ class MeshcatWorld:
 
         # TODO: use whole-body FK
         if joint_positions is not None:
-
             # Store the new joint configuration
             self._jaxsim_models[model_name].reset_joint_positions(
                 positions=np.atleast_1d(joint_positions), joint_names=joint_names
@@ -95,7 +89,6 @@ class MeshcatWorld:
         model_name: str = None,
         model_pose: Optional[Tuple[Sequence, Sequence]] = None,
     ) -> str:
-
         # Create the ROD model from the SDF resource
         rod_model = rod.Sdf.load(sdf=model_description).model
 
@@ -122,7 +115,6 @@ class MeshcatWorld:
 
         # Set the initial model pose
         if model_pose is not None:
-
             meshcat_model.set_base_pose(
                 position=np.array(model_pose[0]), quaternion=np.array(model_pose[1])
             )
@@ -136,7 +128,6 @@ class MeshcatWorld:
         return meshcat_model.name
 
     def remove_model(self, model_name: str) -> None:
-
         if self._visualizer is None:
             msg = "The Meshcat visualizer hasn't been opened yet, the are no models"
             raise RuntimeError(msg)
@@ -149,7 +140,6 @@ class MeshcatWorld:
 
     @property
     def meshcat_visualizer(self) -> MeshcatVisualizer:
-
         if self._visualizer is not None:
             return self._visualizer
 

@@ -13,7 +13,6 @@ from .meshcat.visualizer import MeshcatVisualizer
 
 @dataclasses.dataclass
 class MeshcatModel:
-
     name: str
     visualizer: MeshcatVisualizer = dataclasses.field(repr=False)
 
@@ -38,7 +37,6 @@ class MeshcatModel:
     )
 
     def __post_init__(self):
-
         # Initialize the root node of the model
         self.visualizer[self.name].set_object(meshcat.geometry.Box([0.0, 0.0, 0.0]))
 
@@ -51,7 +49,6 @@ class MeshcatModel:
     def nodes_names(
         self, include_frame_nodes: bool = False, include_visual_nodes: bool = False
     ) -> List[str]:
-
         model_nodes = [self.name] + list(self.link_to_node.values())
 
         if include_frame_nodes:
@@ -65,7 +62,6 @@ class MeshcatModel:
         return model_nodes
 
     def delete(self) -> None:
-
         self.visualizer[self.name].delete()
 
     def set_base_pose(
@@ -74,7 +70,6 @@ class MeshcatModel:
         position: Optional[npt.NDArray] = None,
         quaternion: Optional[npt.NDArray] = None,
     ) -> None:
-
         self.set_node_pose(
             node_name=self.name,
             transform=transform,
@@ -89,7 +84,6 @@ class MeshcatModel:
         position: Optional[npt.NDArray] = None,
         quaternion: Optional[npt.NDArray] = None,
     ) -> None:
-
         if link_name not in self.link_to_node:
             raise ValueError(link_name)
 
@@ -107,7 +101,6 @@ class MeshcatModel:
         position: Optional[npt.NDArray] = None,
         quaternion: Optional[npt.NDArray] = None,
     ) -> None:
-
         if node_name not in self.nodes_names(
             include_frame_nodes=True, include_visual_nodes=True
         ):
@@ -152,6 +145,5 @@ class MeshcatModel:
     def set_link_transforms(
         self, link_names: Sequence[str], transforms: Sequence[npt.NDArray]
     ) -> None:
-
         node_names = [self.link_to_node[l] for l in link_names]
         self.visualizer.set_transforms(paths=node_names, matrices=transforms)

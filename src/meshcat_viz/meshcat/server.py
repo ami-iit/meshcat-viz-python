@@ -18,7 +18,6 @@ class MeshCatServer(ZMQWebSocketBridge):
         keyfile=None,
         ngrok_http_tunnel=False,
     ):
-
         super().__init__(
             zmq_url=zmq_url,
             host=host,
@@ -29,11 +28,9 @@ class MeshCatServer(ZMQWebSocketBridge):
         )
 
     def handle_zmq(self, frames: Sequence[bytes]) -> None:
-
         cmd = frames[0].decode("utf-8")
 
         if cmd == "set_transforms":
-
             try:
                 self.process_cmd_set_transforms(frames=frames)
                 self.zmq_socket.send(f"ok {cmd}".encode("utf-8"))
@@ -47,7 +44,6 @@ class MeshCatServer(ZMQWebSocketBridge):
         super().handle_zmq(frames=frames)
 
     def process_cmd_set_transforms(self, frames: Sequence[bytes]) -> None:
-
         # We cannot use individual calls like: super().handle_zmq(frames=frames)
         # since each of them would send back the ack message to the client.
 
@@ -69,7 +65,6 @@ class MeshCatServer(ZMQWebSocketBridge):
 
         # Iterate through the fields
         for path, set_transform_lowered in zip(paths, set_transform_lowered_cmds):
-
             # Create a hierarchical list of the node's path
             path_list = [p for p in path.decode("utf-8").split("/") if len(p) > 0]
 
@@ -85,7 +80,6 @@ class MeshCatServer(ZMQWebSocketBridge):
     def start_as_subprocess(
         zmq_url: str = None, server_args: List[str] = ()
     ) -> Tuple[subprocess.Popen, str, str]:
-
         # This is almost a copy of:
         #     meshcat.servers.zmqserver.start_zmq_server_as_subprocess
         # We had to re-define it here since the upstream server is started in a
