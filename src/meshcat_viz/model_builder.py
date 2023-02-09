@@ -8,9 +8,9 @@ import meshcat
 import numpy as np
 import rod
 import rod.kinematics
-from jaxsim import logging
 from scipy.spatial.transform import Rotation as R
 
+from . import logging
 from .meshcat.visualizer import MeshcatVisualizer
 from .model import MeshcatModel
 from .visual import VisualShapeData, VisualShapeType

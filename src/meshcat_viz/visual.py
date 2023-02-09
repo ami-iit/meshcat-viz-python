@@ -6,7 +6,6 @@ from typing import Union
 import meshcat
 import numpy.typing as npt
 import rod
-from jaxsim import logging
 
 
 class VisualShapeType(enum.IntEnum):

@@ -6,8 +6,8 @@ from typing import DefaultDict, Dict, List, Optional, Sequence
 import meshcat
 import numpy as np
 import numpy.typing as npt
-from jaxsim import logging
 
+from . import logging
 from .meshcat.visualizer import MeshcatVisualizer
 
 
