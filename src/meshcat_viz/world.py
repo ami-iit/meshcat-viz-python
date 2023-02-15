@@ -1,11 +1,13 @@
 import pathlib
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
-import jax
-import jaxsim.high_level.model
 import numpy as np
+import numpy.typing as npt
 import rod
+from scipy.spatial.transform import Rotation
 
+from . import logging
+from .fk.provider import FKProvider
 from .meshcat.server import MeshCatServer
 from .meshcat.visualizer import MeshcatVisualizer
 from .model import MeshcatModel
@@ -14,28 +16,26 @@ from .model_builder import MeshcatModelBuilder
 
 class MeshcatWorld:
     def __init__(self, dt: float = 0.001, rtf: float = 1.0):
-
         self.dt = dt
         self.rtf = rtf
 
         self._visualizer = None
 
-        self._fk = jax.jit(lambda m: m.forward_kinematics())
+        self._fk_provider: Dict[str, FKProvider] = dict()
         self._meshcat_models: Dict[str, MeshcatModel] = dict()
-        self._jaxsim_models: Dict[str, jaxsim.high_level.model.Model] = dict()
 
     def open(self) -> None:
-
         _ = self.meshcat_visualizer
 
     def close(self) -> None:
-
         if self._visualizer is not None:
-
+            # Close meshcat
             self.meshcat_visualizer.delete()
+            self.meshcat_visualizer.close()
 
-            self._jaxsim_models = dict()
+            # Clear local resources
             self._meshcat_models = dict()
+            self._fk_provider = dict()
             self._visualizer = None
 
     def update_model(
@@ -46,57 +46,74 @@ class MeshcatWorld:
         base_position: Optional[Sequence] = None,
         base_quaternion: Optional[Sequence] = None,
     ) -> None:
-
         if model_name not in self._meshcat_models:
             raise ValueError(model_name)
 
-        if model_name not in self._jaxsim_models:
-            raise ValueError(model_name)
+        # Store all the transforms to send to the meshcat visualizer.
+        # We send them all together to minimize visualization artifacts.
+        node_transforms: Dict[str, npt.NDArray] = dict()
 
         if base_position is not None:
-            self._jaxsim_models[model_name].reset_base_position(
-                position=np.array(base_position)
-            )
+            self._fk_provider[model_name].base_pose[0:3, 3] = base_position
+            node_transforms[model_name] = self._fk_provider[model_name].base_pose
 
         if base_quaternion is not None:
-            self._jaxsim_models[model_name].reset_base_orientation(
-                orientation=np.array(base_quaternion)
-            )
+            R = Rotation.from_quat(
+                np.array(base_quaternion)[np.array([1, 2, 3, 0])]
+            ).as_matrix()
 
-        # Update transform of base link's node
-        W_H_B = self._jaxsim_models[model_name].base_transform()
-        self._meshcat_models[model_name].set_base_pose(transform=W_H_B)
+            self._fk_provider[model_name].base_pose[0:3, 0:3] = R
+            node_transforms[model_name] = self._fk_provider[model_name].base_pose
 
-        # TODO: use whole-body FK
-        if joint_positions is not None:
+        if joint_positions is not None and np.array(joint_positions).size > 0:
+            if len(joint_names) != len(joint_positions):
+                raise ValueError(len(joint_names), len(joint_positions))
 
-            # Store the new joint configuration
-            self._jaxsim_models[model_name].reset_joint_positions(
-                positions=np.atleast_1d(joint_positions), joint_names=joint_names
-            )
+            for joint_name, position in zip(joint_names, joint_positions):
+                if joint_name not in self._fk_provider[model_name].joint_positions:
+                    raise ValueError(f"Unknown joint '{joint_name}'")
 
-            # Compute forward kinematics with JaxSim
-            W_H_i = self._fk(self._jaxsim_models[model_name])
+                self._fk_provider[model_name].joint_positions[joint_name] = position
 
-            # In MeshCat, all link poses are relative to the model's base
-            B_H_W = np.linalg.inv(W_H_B)
-            B_H_i = B_H_W @ W_H_i
+            # Get the base transform
+            B_H_W = np.linalg.inv(self._fk_provider[model_name].base_pose)
 
-            # Update link transforms
-            self._meshcat_models[model_name].set_link_transforms(
-                link_names=self._jaxsim_models[model_name].link_names(),
-                transforms=np.array(B_H_i, dtype=float),
-            )
+            # Store the base to link transform of all handled links
+            for link_name in self._meshcat_models[model_name].link_to_node.keys():
+                try:
+                    W_H_L = self._fk_provider[model_name].get_frame_transform(
+                        frame_name=link_name
+                    )
+                except Exception as e:
+                    logging.warning(msg=str(e))
+                    continue
+
+                node_path = self._meshcat_models[model_name].get_node_path(
+                    node_name=link_name
+                )
+
+                node_transforms[node_path] = B_H_W @ W_H_L
+
+        # Send all the transforms in a single message
+        self._meshcat_models[model_name].visualizer.set_transforms(
+            paths=list(reversed(node_transforms.keys())),
+            matrices=np.array(list(reversed(node_transforms.values())), dtype=float),
+        )
 
     def insert_model(
         self,
-        sdf: Union[str, pathlib.Path],
+        model_description: Union[str, pathlib.Path],
+        is_urdf: bool = False,
         model_name: str = None,
         model_pose: Optional[Tuple[Sequence, Sequence]] = None,
+        fk_provider: Optional[FKProvider] = None,
     ) -> str:
-
         # Create the ROD model from the SDF resource
-        rod_model = rod.Sdf.load(sdf=sdf).model
+        sdf = rod.Sdf.load(sdf=model_description, is_urdf=is_urdf)
+        assert len(sdf.models()) == 1
+
+        # Extract the first model
+        rod_model = sdf.models()[0]
 
         # Extract the model name if not given
         if model_name is None and rod_model.name not in {None, ""}:
@@ -107,36 +124,57 @@ class MeshcatWorld:
         if model_name in self._meshcat_models.keys():
             raise ValueError(f"Model '{model_name}' is already part of the world")
 
-        # Create the JaxSim model from the SDF resource
-        jaxsim_model = jaxsim.high_level.model.Model.build_from_sdf(
-            sdf=sdf, model_name=model_name
-        ).mutable(validate=True)
-
         # Create the MeshcatModel
-        meshcat_model = MeshcatModelBuilder.from_kinematic_graph(
+        meshcat_model = MeshcatModelBuilder.from_rod_model(
             visualizer=self.meshcat_visualizer,
-            kinematic_graph=jaxsim_model.physics_model.description,
             rod_model=rod_model,
             model_name=model_name,
         )
 
         # Set the initial model pose
         if model_pose is not None:
-
             meshcat_model.set_base_pose(
                 position=np.array(model_pose[0]), quaternion=np.array(model_pose[1])
+            )
+
+        # Initialize the FK provider
+        if fk_provider is not None:
+            self._fk_provider[model_name] = fk_provider
+
+        else:
+            model_description_string = (
+                model_description
+                if isinstance(model_description, str)
+                else model_description.read_text()
+            )
+
+            if not is_urdf:
+                from rod.urdf.exporter import UrdfExporter
+
+                model_description_string = UrdfExporter.sdf_to_urdf_string(
+                    sdf=sdf, pretty=True, gazebo_preserve_fixed_joints=False
+                )
+
+            from meshcat_viz.fk.idyntree_provider import IDynTreeFKProvider
+
+            # Initialize the iDynTree provider
+            self._fk_provider[model_name] = IDynTreeFKProvider(
+                urdf=model_description_string,
+                considered_joints=[
+                    j.name
+                    for j in rod.Sdf.load(sdf=model_description_string, is_urdf=True)
+                    .models()[0]
+                    .joints()
+                    if j.type != "fixed"
+                ],
             )
 
         # Store the model
         self._meshcat_models[meshcat_model.name] = meshcat_model
 
-        # Store the JaxSim model, used to compute forward kinematics
-        self._jaxsim_models[meshcat_model.name] = jaxsim_model
-
         return meshcat_model.name
 
     def remove_model(self, model_name: str) -> None:
-
         if self._visualizer is None:
             msg = "The Meshcat visualizer hasn't been opened yet, the are no models"
             raise RuntimeError(msg)
@@ -149,7 +187,6 @@ class MeshcatWorld:
 
     @property
     def meshcat_visualizer(self) -> MeshcatVisualizer:
-
         if self._visualizer is not None:
             return self._visualizer
 

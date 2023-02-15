@@ -6,11 +6,9 @@ from typing import Union
 import meshcat
 import numpy.typing as npt
 import rod
-from jaxsim import logging
 
 
 class VisualShapeType(enum.IntEnum):
-
     Box = enum.auto()
     Capsule = enum.auto()
     Cylinder = enum.auto()
@@ -22,7 +20,6 @@ class VisualShapeType(enum.IntEnum):
 
 @dataclasses.dataclass
 class VisualShapeData:
-
     name: str
     shape_type: VisualShapeType
 
@@ -31,28 +28,21 @@ class VisualShapeData:
     geometry: Union[rod.Box, rod.Sphere, rod.Cylinder, rod.Mesh]
 
     def scoped_name(self) -> str:
-
         return f"{self.parent_link.name}/{self.name}"
 
     def to_meshcat_geometry(self) -> meshcat.geometry.Geometry:
-
         if self.shape_type is VisualShapeType.Box:
-
-            logging.warning("Returning box")
             return meshcat.geometry.Box(self.geometry.size)
 
         elif self.shape_type is VisualShapeType.Sphere:
-
             return meshcat.geometry.Sphere(radius=self.geometry.radius)
 
         elif self.shape_type is VisualShapeType.Cylinder:
-
             return meshcat.geometry.Cylinder(
                 height=self.geometry.length, radius=self.geometry.radius
             )
 
         elif self.shape_type is VisualShapeType.Mesh:
-
             assert pathlib.Path(self.geometry.uri).is_file()
             suffix = pathlib.Path(self.geometry.uri).suffix.lower()
 

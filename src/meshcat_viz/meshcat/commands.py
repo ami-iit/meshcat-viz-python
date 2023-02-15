@@ -16,7 +16,6 @@ class SetTransforms:
         paths: Sequence[str],
         visualizer_root_path: meshcat.path.Path,
     ):
-
         self.paths = paths
         self.matrices = matrices
         self.visualizer_root_path = visualizer_root_path
@@ -24,7 +23,6 @@ class SetTransforms:
         assert np.array(matrices).shape == (len(paths), 4, 4)
 
     def multipart(self) -> Sequence:
-
         tfs = [
             commands.SetTransform(matrix=m, path=self.visualizer_root_path.append(p))
             for (m, p) in zip(self.matrices, self.paths)
