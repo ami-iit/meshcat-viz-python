@@ -143,7 +143,11 @@ class ForceArrowNode:
         )
 
         # Return the rotation matrix computed with the Rodrigues formula
-        return np.eye(3) + sinθ * K + (1 - cosθ) * K @ K
+        # https://math.stackexchange.com/a/476311
+        # https://stackoverflow.com/a/69911892
+        # https://gist.github.com/aormorningstar/3e5dda91f155d7919ef6256cb057ceee
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.align_vectors.html
+        return np.eye(3) + K + K @ K * (1 - cosθ) / (sinθ**2)
 
 
 @dataclasses.dataclass
