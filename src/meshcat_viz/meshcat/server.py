@@ -100,9 +100,10 @@ class MeshCatServer(ZMQWebSocketBridge):
         # Copy existing environmental variables as some of them might be needed
         # e.g. on Windows SYSTEMROOT and PATH
         env = dict(os.environ)
-        env[
-            "PYTHONPATH"
-        ] += f":{os.path.dirname(os.path.dirname(os.path.dirname(__file__)))}"
+        env["PYTHONPATH"] = (
+            env.get("PYTHONPATH", "")
+            + f":{os.path.dirname(os.path.dirname(os.path.dirname(__file__)))}"
+        )
         # Use start_new_session if it's available. Without it, in jupyter the server
         # goes down when we cancel execution of any cell in the notebook.
         server_proc = subprocess.Popen(
