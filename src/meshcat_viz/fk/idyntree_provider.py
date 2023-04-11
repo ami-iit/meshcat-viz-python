@@ -57,8 +57,8 @@ class IDynTreeFKProvider(FKProvider):
             raise ValueError(f"Failed to find frame '{frame_name}'")
 
         H = idt.Transform()
-        H.fromHomogeneousTransform(idt.Matrix4x4_FromPython(self.base_pose))
-        s = idt.VectorDynSize_FromPython(list(self.joint_positions.values()))
+        H.fromHomogeneousTransform(idt.Matrix4x4(self.base_pose))
+        s = idt.VectorDynSize(list(self.joint_positions.values()))
 
         self.kin_dyn_computations.setRobotState(H, s, idt.Twist(), s, idt.Vector3())
 
