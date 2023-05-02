@@ -15,10 +15,7 @@ from .model_builder import MeshcatModelBuilder
 
 
 class MeshcatWorld:
-    def __init__(self, dt: float = 0.001, rtf: float = 1.0):
-        self.dt = dt
-        self.rtf = rtf
-
+    def __init__(self) -> None:
         self._visualizer = None
 
         self._fk_provider: Dict[str, FKProvider] = dict()
