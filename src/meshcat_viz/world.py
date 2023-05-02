@@ -15,16 +15,28 @@ from .model_builder import MeshcatModelBuilder
 
 
 class MeshcatWorld:
+    """High-level class to manage a MeshCat scene."""
+
     def __init__(self) -> None:
+        """Initialize a MeshCat world."""
+
+        # The meshcat visualizer instance
         self._visualizer = None
 
+        # A forward kinematics provider for each visualized model
         self._fk_provider: Dict[str, FKProvider] = dict()
+
+        # All visualized models
         self._meshcat_models: Dict[str, MeshcatModel] = dict()
 
     def open(self) -> None:
+        """Initialize the meshcat world by opening a visualizer."""
+
         _ = self.meshcat_visualizer
 
     def close(self) -> None:
+        """Close the meshcat world and clear all the resources."""
+
         if self._visualizer is not None:
             # Close meshcat
             self.meshcat_visualizer.delete()
@@ -43,6 +55,17 @@ class MeshcatWorld:
         base_position: Optional[Sequence] = None,
         base_quaternion: Optional[Sequence] = None,
     ) -> None:
+        """
+        Update a visualized model.
+
+        Args:
+            model_name: The name of the model to update.
+            joint_positions: The joint positions to update.
+            joint_names: The names of the joints to update.
+            base_position: The base position to update.
+            base_quaternion: The base quaternion to update.
+        """
+
         if model_name not in self._meshcat_models:
             raise ValueError(model_name)
 
@@ -100,11 +123,29 @@ class MeshcatWorld:
     def insert_model(
         self,
         model_description: Union[str, pathlib.Path],
-        is_urdf: bool = False,
-        model_name: str = None,
+        is_urdf: Optional[bool] = None,
+        model_name: Optional[str] = None,
         model_pose: Optional[Tuple[Sequence, Sequence]] = None,
         fk_provider: Optional[FKProvider] = None,
     ) -> str:
+        """
+        Insert a model in the world.
+
+        Args:
+            model_description: The model description either as a path to a URDF or SDF file
+               or as a string with its content.
+            is_urdf: Whether the model description is a URDF or SDF file.
+            model_name: The name of the model. If not given, the name is extracted from
+                the model description.
+            model_pose: The initial pose of the model. If not given, the pose is extracted
+                from the model description.
+            fk_provider: The forward kinematics provider for the model. If not given,
+                the forward kinematics is computed with iDynTree.
+
+        Returns:
+            The name of the inserted model.
+        """
+
         # Create the ROD model from the SDF resource
         sdf = rod.Sdf.load(sdf=model_description, is_urdf=is_urdf)
         assert len(sdf.models()) == 1
@@ -177,6 +218,13 @@ class MeshcatWorld:
         return meshcat_model.name
 
     def remove_model(self, model_name: str) -> None:
+        """
+        Remove a model from the world.
+
+        Args:
+            model_name: The name of the model to remove.
+        """
+
         if self._visualizer is None:
             msg = "The Meshcat visualizer hasn't been opened yet, the are no models"
             raise RuntimeError(msg)
@@ -189,6 +237,8 @@ class MeshcatWorld:
 
     @property
     def meshcat_visualizer(self) -> MeshcatVisualizer:
+        """Build and return a lazy-initialized Meshcat visualizer."""
+
         if self._visualizer is not None:
             return self._visualizer
 
