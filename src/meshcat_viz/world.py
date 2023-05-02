@@ -112,11 +112,13 @@ class MeshcatWorld:
         # Extract the first model
         rod_model = sdf.models()[0]
 
-        # Extract the model name if not given
-        if model_name is None and rod_model.name not in {None, ""}:
-            model_name = rod_model.name
-        else:
+        # Check that a model name is available
+        if model_name is None and rod_model.name in {None, ""}:
             raise ValueError("Failed to assign a name to the model")
+
+        # Assign the model name
+        model_name = model_name if model_name is not None else rod_model.name
+        logging.debug(msg=f"Inserting model '{model_name}'")
 
         if model_name in self._meshcat_models.keys():
             raise ValueError(f"Model '{model_name}' is already part of the world")
