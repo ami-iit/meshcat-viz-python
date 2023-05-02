@@ -136,6 +136,9 @@ class MeshcatWorld:
                 position=np.array(model_pose[0]), quaternion=np.array(model_pose[1])
             )
 
+        elif rod_model.pose is not None:
+            meshcat_model.set_base_pose(transform=rod_model.pose.transform())
+
         # Initialize the FK provider
         if fk_provider is not None:
             self._fk_provider[model_name] = fk_provider
