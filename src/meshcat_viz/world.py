@@ -20,7 +20,8 @@ class MeshcatWorld:
     def __init__(self) -> None:
         """Initialize a MeshCat world."""
 
-        # The meshcat visualizer instance
+        # The meshcat visualizer instance and the corresponding url
+        self._web_url = None
         self._visualizer = None
 
         # A forward kinematics provider for each visualized model
@@ -243,7 +244,7 @@ class MeshcatWorld:
             return self._visualizer
 
         # Start custom MeshCat server
-        server_proc, zmq_url, web_url = MeshCatServer.start_as_subprocess()
+        server_proc, zmq_url, self._web_url = MeshCatServer.start_as_subprocess()
 
         # Attach custom visualizer to custom server
         meshcat_visualizer = MeshcatVisualizer(zmq_url=zmq_url)
@@ -257,3 +258,13 @@ class MeshcatWorld:
 
         self._visualizer = meshcat_visualizer
         return self._visualizer
+
+    @property
+    def web_url(self) -> str:
+        """Build a Meshcat visualizer and return its URL."""
+
+        # Trigger the lazy creation of the visualizer
+        _ = self.meshcat_visualizer
+
+        # Return the corresponding URL
+        return self._web_url
