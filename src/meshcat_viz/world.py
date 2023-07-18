@@ -6,6 +6,8 @@ import numpy.typing as npt
 import rod
 from scipy.spatial.transform import Rotation
 
+from meshcat_viz.meshcat.light import HemisphereLight
+
 from . import logging
 from .fk.provider import FKProvider
 from .meshcat.server import MeshCatServer
@@ -260,6 +262,20 @@ class MeshcatWorld:
         meshcat_visualizer["/Background"].set_property("visible", True)
         meshcat_visualizer["/Background"].set_property("top_color", [1, 1, 1])
         meshcat_visualizer["/Background"].set_property("bottom_color", [0, 0, 0])
+
+        # Disable all the lights by default
+        meshcat_visualizer["/Lights/SpotLight"].set_property("visible", False)
+        meshcat_visualizer["/Lights/PointLightPositiveX"].set_property("visible", False)
+        meshcat_visualizer["/Lights/PointLightNegativeX"].set_property("visible", False)
+        meshcat_visualizer["/Lights/AmbientLight"].set_property("visible", False)
+        meshcat_visualizer["/Lights/FillLight"].set_property("visible", False)
+
+        # Enable only the PointLightNegativeX light
+        meshcat_visualizer["/Lights/PointLightNegativeX"].set_property("visible", True)
+
+        # Insert a Hemisphere light
+        light = HemisphereLight(position=(0, 0, 5.0), intensity=1 / np.pi)
+        meshcat_visualizer["/Lights/Hemisphere"].set_object(light)
 
         self._visualizer = meshcat_visualizer
         return self._visualizer
