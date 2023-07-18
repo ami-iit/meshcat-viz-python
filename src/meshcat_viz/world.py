@@ -17,7 +17,7 @@ from .model_builder import MeshcatModelBuilder
 class MeshcatWorld:
     """High-level class to manage a MeshCat scene."""
 
-    def __init__(self) -> None:
+    def __init__(self, draw_grid: bool = True) -> None:
         """Initialize a MeshCat world."""
 
         # The meshcat visualizer instance and the corresponding url
@@ -29,6 +29,9 @@ class MeshcatWorld:
 
         # All visualized models
         self._meshcat_models: Dict[str, MeshcatModel] = dict()
+
+        # Options
+        self.draw_grid = draw_grid
 
     def open(self) -> None:
         """Initialize the meshcat world by opening a visualizer."""
@@ -250,8 +253,10 @@ class MeshcatWorld:
         meshcat_visualizer = MeshcatVisualizer(zmq_url=zmq_url)
         meshcat_visualizer.window.server_proc = server_proc
 
+        # Draw the terrain grid
+        meshcat_visualizer["/Grid"].set_property("visible", self.draw_grid)
+
         # Configure the visualizer
-        meshcat_visualizer["/Grid"].set_property("visible", True)
         meshcat_visualizer["/Background"].set_property("visible", True)
         meshcat_visualizer["/Background"].set_property("top_color", [1, 1, 1])
         meshcat_visualizer["/Background"].set_property("bottom_color", [0, 0, 0])
