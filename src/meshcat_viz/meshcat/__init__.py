@@ -1,1 +1,1 @@
-from . import commands, server, visualizer
+from . import commands, geometry, material, server, visualizer
