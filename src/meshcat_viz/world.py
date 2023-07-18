@@ -1,12 +1,16 @@
 import pathlib
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
+import meshcat.geometry
 import numpy as np
 import numpy.typing as npt
 import rod
 from scipy.spatial.transform import Rotation
 
+from meshcat_viz.heightmap import Heightmap
+from meshcat_viz.meshcat.geometry import PlaneGeometry
 from meshcat_viz.meshcat.light import HemisphereLight
+from meshcat_viz.meshcat.material import HeightmapMaterial
 
 from . import logging
 from .fk.provider import FKProvider
@@ -240,6 +244,155 @@ class MeshcatWorld:
 
         self._meshcat_models[model_name].delete()
         self._meshcat_models.pop(model_name)
+
+    def insert_terrain_flat(
+        self,
+        x_size: float = 10.0,
+        y_size: float = 10.0,
+        enable_grid: Optional[bool] = None,
+    ) -> None:
+        """"""
+
+        # Before starting, remove any previously inserted terrain
+        self.remove_terrain()
+
+        # Insert a plane
+        geometry = PlaneGeometry(width=y_size, height=x_size)
+
+        # Create the plane material
+        material = meshcat.geometry.MeshPhongMaterial(
+            wireframe=False,
+            color=0x999999,
+            receiveShadows=True,
+        )
+
+        # Insert the plane terrain
+        self.meshcat_visualizer["/Terrain"].set_object(
+            geometry=geometry, material=material
+        )
+
+        # Lower the terrain to avoid covering the xy axes, if enabled
+        self.meshcat_visualizer["/Terrain"].set_transform(
+            matrix=np.block(
+                [
+                    [np.eye(3), np.vstack([0, 0, -0.000_100])],
+                    [0, 0, 0, 1],
+                ]
+            )
+        )
+
+        if not enable_grid:
+            return
+
+        # Create another terrain material used as wireframe overlay
+        material_wireframe = meshcat.geometry.MeshPhongMaterial(
+            wireframe=True,
+            color=0x888888,
+            receiveShadows=True,
+        )
+
+        # Insert it as child node of the terrain
+        self.meshcat_visualizer["/Terrain/wireframe"].set_object(
+            meshcat.geometry.Mesh(material=material_wireframe, geometry=geometry)
+        )
+
+        # Apply a minor translation so that the grid is well visible over the terrain
+        self.meshcat_visualizer["/Terrain/wireframe"].set_transform(
+            matrix=np.block(
+                [
+                    [np.eye(3), np.vstack([0, 0, -0.000_050])],
+                    [0, 0, 0, 1],
+                ]
+            )
+        )
+
+    def insert_terrain_heightmap(
+        self,
+        heightmap: Heightmap,
+        enable_grid: Optional[bool] = None,
+    ) -> None:
+        """"""
+
+        # Before starting, remove any previously inserted terrain
+        self.remove_terrain()
+
+        X, Y, Z = heightmap.to_grid()
+        z_range = np.max(Z) - np.min(Z)
+
+        x = X[:, 0]
+        y = Y[0, :]
+
+        material = HeightmapMaterial(
+            displacement_scale=float(z_range),
+            displacement_map=heightmap.to_meshcat(),
+            wireframe=False,
+            color=0x999999,
+            receiveShadows=True,
+        )
+
+        geometry = PlaneGeometry(
+            width=float(np.max(x) - np.min(x)),
+            height=float(np.max(y) - np.min(y)),
+            widthSegments=len(x),
+            heightSegments=len(y),
+        )
+
+        # Insert the terrain surface
+        self.meshcat_visualizer["/Terrain"].set_object(
+            material=material,
+            geometry=geometry,
+        )
+
+        # Translate the surface accordingly to the vertical offset
+        self.meshcat_visualizer["/Terrain"].set_transform(
+            matrix=np.block(
+                [
+                    [
+                        np.eye(3),
+                        np.vstack(
+                            [
+                                np.min(X) + 0.5 * (np.max(X) - np.min(X)),
+                                np.min(Y) + 0.5 * (np.max(Y) - np.min(Y)),
+                                np.min(Z),
+                            ]
+                        ),
+                    ],
+                    [0, 0, 0, 1],
+                ]
+            )
+        )
+
+        if not enable_grid:
+            return
+
+        # Create another terrain material used as wireframe overlay
+        material_wireframe = HeightmapMaterial(
+            displacement_scale=float(z_range),
+            displacement_map=heightmap.to_meshcat(),
+            wireframe=True,
+            receiveShadows=False,
+            color=0x888888,
+        )
+
+        # Insert it as child node of the terrain
+        self.meshcat_visualizer["/Terrain/wireframe"].set_object(
+            meshcat.geometry.Mesh(material=material_wireframe, geometry=geometry)
+        )
+
+        # Apply a minor translation so that the grid is well visible over the terrain
+        self.meshcat_visualizer["/Terrain/wireframe"].set_transform(
+            matrix=np.block(
+                [
+                    [np.eye(3), np.vstack([0, 0, 0.000_100])],
+                    [0, 0, 0, 1],
+                ]
+            )
+        )
+
+    def remove_terrain(self) -> None:
+        """Remove any existing terrain."""
+
+        self.meshcat_visualizer["/Terrain"].delete()
 
     @property
     def meshcat_visualizer(self) -> MeshcatVisualizer:
