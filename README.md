@@ -29,7 +29,7 @@ from meshcat_viz.world import MeshcatWorld
 # Load a model resource
 model_sdf_path = pathlib.Path(
     gym_ignition_models.get_model_resource(
-        robot_name="panda", resource_type=gym_ignition_models.ResourceType.SDF_PATH
+        robot_name="panda", resource_type=gym_ignition_models.ResourceType.URDF_PATH
     )
 )
 
