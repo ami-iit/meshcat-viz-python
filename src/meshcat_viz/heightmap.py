@@ -1,5 +1,4 @@
 import dataclasses
-import logging
 import tempfile
 from typing import Optional, Tuple
 
@@ -8,12 +7,10 @@ import numpy as np
 import numpy.typing as npt
 import png
 
-from . import logging
-
 
 @dataclasses.dataclass
 class Heightmap:
-    """"""
+    """Helper class to define a smooth non-flat terrain modelled as a heightmap."""
 
     # This 2D matrix describes the (X, Y) -> Z terrain mapping.
     # The matrix refers to the x-axis and y-axis ranges determined by the
@@ -21,9 +18,14 @@ class Heightmap:
     # the matrix.
     matrix: npt.NDArray = dataclasses.field(kw_only=True)
 
+    # Bounds of the x and y axes of the terrain.
+    # The two axes of `matrix` are assumed to refer to these ranges.
     x_bounds: Tuple[float, float] = dataclasses.field(default=(-0.5, 0.5))
     y_bounds: Tuple[float, float] = dataclasses.field(default=(-0.5, 0.5))
 
+    # These two attributes are used to normalize the matrix values in [0, 1]
+    # and denormalize it to the original range when needed. They are computed
+    # automatically from `matrix` if not provided.
     z_offset: float = dataclasses.field(default=None)
     z_bounds: Optional[Tuple[float, float]] = dataclasses.field(default=None)
 
@@ -39,14 +41,17 @@ class Heightmap:
         y = np.linspace(self.y_bounds[0], self.y_bounds[1], self.matrix.shape[1])
 
         # Create the X and Y matrices of the grid.
-        # We aim to obtain the equivalence, for a generic i/j indices:
+        # Given a terrain function f: (x, y) -> z, we aim to obtain the following
+        # equivalence for a generic i/j indices:
+        #
         # z = f(x[i], y[j]) = f(X[i, j], Y[i, j]) = Z[i, j].
+        #
         Y, X = np.meshgrid(y, x)
 
         return X, Y, Z
 
     def __post_init__(self):
-        """"""
+        """Post-initialization checks and computations."""
 
         if self.matrix.ndim != 2:
             raise ValueError(f"The matrix must be 2D (found {self.matrix.ndim} dims)")
@@ -106,14 +111,21 @@ class Heightmap:
         import matplotlib.image
         import matplotlib.pyplot as plt
 
+        # Get the meshgrid matrices
         X, Y, Z = self.to_grid()
 
+        # Extract the x and y ranges
         x = X[:, 0]
         y = Y[0, :]
 
+        # Compute the extent of the image necessary for matplotlib
         dx = (x[1] - x[0]) / 2.0
         dy = (y[1] - y[0]) / 2.0
         extent = [x[0] - dx, x[-1] + dx, y[0] - dy, y[-1] + dy]
+
+        # ==================
+        # Plot the heightmap
+        # ==================
 
         fig, ax = plt.subplots(nrows=1, ncols=1)
 
