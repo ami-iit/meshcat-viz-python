@@ -88,7 +88,10 @@ class Heightmap:
         # Create a temporary file with the PNG image...
         with tempfile.NamedTemporaryFile(mode="w+b", suffix=".png") as f:
             png.Writer(H, W, bitdepth=16, greyscale=True).write(
-                f, matrix_uint16.T.tolist()
+                f,
+                # Note that we have o flip the matrix over the y axis to match the
+                # convention used in meshcat
+                np.fliplr(matrix_uint16).T.tolist(),
             )
 
             f.seek(0)
