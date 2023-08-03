@@ -71,6 +71,8 @@ class Heightmap:
             dtype=np.float32,
         )
 
+        assert not np.isnan(self.matrix).any()
+
     def to_meshcat(self) -> meshcat.geometry.ImageTexture:
         """Convert the matrix to ImageTexture compatible with MeshCat."""
 
