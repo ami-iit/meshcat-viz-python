@@ -62,6 +62,9 @@ class Heightmap:
         # Get the range of the z axis
         z_range = self.z_bounds[1] - self.z_bounds[0]
 
+        # In the terrain is completely flat, z_range is zero
+        z_range = z_range if z_range > 0 else 1.0
+
         # Store the matrix normalized in [0, 1]
         self.matrix = np.array(
             (self.matrix - self.z_offset) / z_range,
