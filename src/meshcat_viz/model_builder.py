@@ -8,6 +8,7 @@ import meshcat
 import numpy as np
 import rod
 import rod.kinematics
+from resolve_robotics_uri_py import resolve_robotics_uri
 from scipy.spatial.transform import Rotation as R
 
 from . import logging
@@ -67,26 +68,10 @@ class MeshcatModelBuilder(abc.ABC):
             for visual in visuals:
                 if visual.geometry.mesh is not None:
                     visual.geometry.mesh.uri = str(
-                        MeshcatModelBuilder.resolve_local_uri(
-                            uri=visual.geometry.mesh.uri
-                        )
+                        resolve_robotics_uri(visual.geometry.mesh.uri)
                     )
 
         return rod_model_resolved
-
-    @staticmethod
-    def resolve_local_uri(uri: str) -> pathlib.Path:
-        # Remove the prefix of the URI
-        uri_no_prefix = uri.split(sep="//")[-1]
-
-        for path in os.environ["IGN_GAZEBO_RESOURCE_PATH"].split(":"):
-            tentative = pathlib.Path(path) / uri_no_prefix
-
-            if tentative.is_file():
-                logging.debug(f"Resolved URI: {tentative}")
-                return tentative
-
-        raise RuntimeError(f"Failed to resolve URI: {uri}")
 
     @staticmethod
     def copy_tree(meshcat_model: MeshcatModel, rod_model: rod.Model) -> None:
