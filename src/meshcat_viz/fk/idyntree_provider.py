@@ -14,7 +14,9 @@ class IDynTreeFKProvider(FKProvider):
     urdf: dataclasses.InitVar[Union[str, pathlib.Path]]
     considered_joints: dataclasses.InitVar[List[str]]
 
-    base_pose: npt.NDArray = dataclasses.field(default=np.eye(4), init=False)
+    base_pose: npt.NDArray = dataclasses.field(
+        default_factory=lambda: np.eye(4), init=False
+    )
     joint_positions: Dict[str, float] = dataclasses.field(
         default_factory=dict, init=False
     )
